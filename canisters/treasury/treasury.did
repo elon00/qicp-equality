@@ -20,6 +20,8 @@ type GrantProposal = record {
   status : GrantStatus;
   conway_density : float32;
   pqc_signature_hash : text;
+  votes_for : nat64;
+  votes_against : nat64;
 };
 
 type ProposalSubmission = record {
@@ -34,6 +36,7 @@ type ProposalSubmission = record {
 service : {
   submit_proposal : (ProposalSubmission) -> (variant { Ok : text; Err : text });
   vote_proposal : (text, bool) -> (variant { Ok : text; Err : text });
+  approve_proposal : (text) -> (variant { Ok : text; Err : text });
   disburse_grant : (text) -> (variant { Ok : text; Err : text });
   cancel_disputed_grant : (text, text) -> (variant { Ok : text; Err : text });
   get_proposal : (text) -> (opt GrantProposal) query;

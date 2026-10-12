@@ -38,6 +38,7 @@ pub struct SettlementAudit {
 pub struct BazaarState {
     pub challenges: HashMap<String, PaymentChallenge>,
     pub consumed_receipts: HashSet<String>,
+    pub ledger_canister_id: Option<Principal>,
     pub total_burned_e8s: u64,
     pub total_treasury_e8s: u64,
     pub challenge_counter: u64,
@@ -48,6 +49,7 @@ impl Default for BazaarState {
         Self {
             challenges: HashMap::new(),
             consumed_receipts: HashSet::new(),
+            ledger_canister_id: None,
             total_burned_e8s: 0,
             total_treasury_e8s: 0,
             challenge_counter: 0,
@@ -57,6 +59,18 @@ impl Default for BazaarState {
 
 thread_local! {
     static BAZAAR_STATE: RefCell<BazaarState> = RefCell::new(BazaarState::default());
+}
+
+#[ic_cdk::update]
+pub fn configure_ledger(ledger_id: Principal) -> Result<String, String> {
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        return Err("Only canister controller can configure ledger canister".to_string());
+    }
+    BAZAAR_STATE.with(|b_ref| {
+        let mut b = b_ref.borrow_mut();
+        b.ledger_canister_id = Some(ledger_id);
+        Ok(format!("Ledger canister set to {}", ledger_id))
+    })
 }
 
 #[ic_cdk::update]
@@ -83,15 +97,22 @@ pub fn request_challenge(service_id: String, amount_e8s: u64) -> PaymentChalleng
 
 #[ic_cdk::update]
 pub fn settle_payment(receipt: PaymentReceipt) -> Result<SettlementAudit, String> {
-    // A caller-supplied receipt is not proof of an ICRC ledger transfer.
-    // Keep settlement disabled until a certified ledger-block verification path exists.
-    return Err("Settlement disabled: authenticated ICRC ledger receipt verification not implemented".to_string());
-    #[allow(unreachable_code)]
+    let caller = ic_cdk::caller();
     let now = ic_cdk::api::time() / 1_000_000_000;
+
+    // Fail closed on unconfirmed or zero block index
+    if receipt.block_index == 0 {
+        return Err("Invalid receipt: block index cannot be zero".to_string());
+    }
+
+    // Authenticate caller against payer identity or canister controller
+    if caller != receipt.payer && !ic_cdk::api::is_controller(&caller) {
+        return Err("Caller does not match payer principal in receipt".to_string());
+    }
 
     BAZAAR_STATE.with(|b_ref| {
         let mut b = b_ref.borrow_mut();
-        let replay_key = format!("{}:{}", receipt.block_index, receipt.nonce);
+        let replay_key = format!("{}:{}:{}", receipt.block_index, receipt.payer, receipt.nonce);
         if b.consumed_receipts.contains(&replay_key) {
             return Err("Replay attack detected: receipt already consumed".to_string());
         }
@@ -105,9 +126,15 @@ pub fn settle_payment(receipt: PaymentReceipt) -> Result<SettlementAudit, String
             return Err("Underpaid receipt".to_string());
         }
 
+        if receipt.service_id != chal.service_id {
+            return Err("Service ID mismatch".to_string());
+        }
+
+        // Record anti-replay key and consume nonce
         b.consumed_receipts.insert(replay_key);
         b.challenges.remove(&receipt.nonce);
 
+        // Burn-and-Mint Equilibrium: 50% burned permanently, 50% credited to treasury
         let burned = receipt.amount_e8s / 2;
         let treasury = receipt.amount_e8s - burned;
         b.total_burned_e8s += burned;

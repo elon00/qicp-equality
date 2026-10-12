@@ -3,7 +3,7 @@
 
 use candid::{CandidType, Deserialize, Principal};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq)]
 pub enum GrantStatus {
@@ -27,6 +27,8 @@ pub struct GrantProposal {
     pub status: GrantStatus,
     pub conway_density: f32,
     pub pqc_signature_hash: String,
+    pub votes_for: u64,
+    pub votes_against: u64,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -43,6 +45,7 @@ pub struct ProposalSubmission {
 pub struct TreasuryState {
     pub admin: Principal,
     pub proposals: HashMap<String, GrantProposal>,
+    pub voters: HashMap<String, HashSet<Principal>>,
     pub proposal_count: u64,
     pub balance_e8s: u64,
 }
@@ -52,6 +55,7 @@ impl Default for TreasuryState {
         Self {
             admin: Principal::anonymous(),
             proposals: HashMap::new(),
+            voters: HashMap::new(),
             proposal_count: 0,
             balance_e8s: 1_000_000_000_00000000, // 1 Billion QICP initial reserve
         }
@@ -84,17 +88,75 @@ pub fn submit_proposal(sub: ProposalSubmission) -> Result<String, String> {
             status: GrantStatus::Submitted,
             conway_density: sub.conway_density,
             pqc_signature_hash: sub.pqc_signature_hash,
+            votes_for: 0,
+            votes_against: 0,
         };
 
         treasury.proposals.insert(prop_id.clone(), proposal);
+        treasury.voters.insert(prop_id.clone(), HashSet::new());
         Ok(prop_id)
+    })
+}
+
+#[ic_cdk::update]
+pub fn vote_proposal(prop_id: String, support: bool) -> Result<String, String> {
+    let caller = ic_cdk::caller();
+
+    TREASURY_STATE.with(|t_ref| {
+        let mut treasury = t_ref.borrow_mut();
+        if treasury.voters.entry(prop_id.clone()).or_default().contains(&caller) {
+            return Err("Caller has already voted on this proposal".to_string());
+        }
+
+        let prop = treasury.proposals.get_mut(&prop_id).ok_or("Proposal not found")?;
+        if prop.status != GrantStatus::Submitted && prop.status != GrantStatus::UnderReview {
+            return Err("Proposal not in voting state".to_string());
+        }
+
+        if support {
+            prop.votes_for += 1;
+        } else {
+            prop.votes_against += 1;
+        }
+
+        let votes_for = prop.votes_for;
+        let votes_against = prop.votes_against;
+        if votes_for >= 3 && votes_for > votes_against {
+            prop.status = GrantStatus::Approved;
+        }
+        let status = prop.status.clone();
+
+        treasury.voters.entry(prop_id.clone()).or_default().insert(caller);
+
+        Ok(format!(
+            "Vote recorded. Current tally: {} for, {} against. Status: {:?}",
+            votes_for, votes_against, status
+        ))
+    })
+}
+
+#[ic_cdk::update]
+pub fn approve_proposal(prop_id: String) -> Result<String, String> {
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        return Err("Only canister controller can manually approve proposals".to_string());
+    }
+
+    TREASURY_STATE.with(|t_ref| {
+        let mut treasury = t_ref.borrow_mut();
+        let prop = treasury.proposals.get_mut(&prop_id).ok_or("Proposal not found")?;
+        if prop.status != GrantStatus::Submitted && prop.status != GrantStatus::UnderReview {
+            return Err("Proposal cannot be approved in its current state".to_string());
+        }
+
+        prop.status = GrantStatus::Approved;
+        Ok(format!("Proposal {} approved by controller", prop_id))
     })
 }
 
 #[ic_cdk::update]
 pub fn disburse_grant(prop_id: String) -> Result<String, String> {
     if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
-        return Err("Unauthorized disbursement".to_string());
+        return Err("Unauthorized disbursement: caller must be controller".to_string());
     }
     let now = ic_cdk::api::time() / 1_000_000_000;
 
@@ -106,12 +168,12 @@ pub fn disburse_grant(prop_id: String) -> Result<String, String> {
             (prop.amount_e8s, prop.unlock_timestamp, prop.status.clone(), prop.beneficiary)
         };
 
-        if now < unlock_timestamp {
-            return Err("Dispute timelock not yet elapsed".to_string());
+        if status != GrantStatus::Approved {
+            return Err("Invalid status: grant must be Approved before disbursement".to_string());
         }
 
-        if status != GrantStatus::Approved {
-            return Err("Invalid status for disbursement".to_string());
+        if now < unlock_timestamp {
+            return Err("Dispute timelock not yet elapsed (7-day window active)".to_string());
         }
 
         if treasury.balance_e8s < amount_e8s {
@@ -135,7 +197,7 @@ pub fn cancel_disputed_grant(prop_id: String, reason: String) -> Result<String, 
     TREASURY_STATE.with(|t_ref| {
         let mut treasury = t_ref.borrow_mut();
         if !ic_cdk::api::is_controller(&caller) {
-            return Err("Unauthorized".to_string());
+            return Err("Unauthorized: only controller may cancel disputed grants".to_string());
         }
 
         let prop = treasury.proposals.get_mut(&prop_id).ok_or("Proposal not found")?;
