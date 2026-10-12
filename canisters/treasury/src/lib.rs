@@ -93,6 +93,9 @@ pub fn submit_proposal(sub: ProposalSubmission) -> Result<String, String> {
 
 #[ic_cdk::update]
 pub fn disburse_grant(prop_id: String) -> Result<String, String> {
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        return Err("Unauthorized disbursement".to_string());
+    }
     let now = ic_cdk::api::time() / 1_000_000_000;
 
     TREASURY_STATE.with(|t_ref| {
@@ -107,7 +110,7 @@ pub fn disburse_grant(prop_id: String) -> Result<String, String> {
             return Err("Dispute timelock not yet elapsed".to_string());
         }
 
-        if status != GrantStatus::Approved && status != GrantStatus::Submitted {
+        if status != GrantStatus::Approved {
             return Err("Invalid status for disbursement".to_string());
         }
 
@@ -131,7 +134,7 @@ pub fn cancel_disputed_grant(prop_id: String, reason: String) -> Result<String, 
 
     TREASURY_STATE.with(|t_ref| {
         let mut treasury = t_ref.borrow_mut();
-        if treasury.admin != Principal::anonymous() && caller != treasury.admin {
+        if !ic_cdk::api::is_controller(&caller) {
             return Err("Unauthorized".to_string());
         }
 
