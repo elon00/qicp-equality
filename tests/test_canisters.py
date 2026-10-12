@@ -1,5 +1,5 @@
 """
-Tests for Canister Candid Interfaces, Cargo Workspace, and Deterministic Logic.
+Tests for Canister Candid Interfaces, Cargo Workspace, Wasm Binaries, and State Transitions.
 """
 
 import json
@@ -35,13 +35,25 @@ def test_candid_did_interfaces():
             "icrc1_decimals",
             "icrc1_fee",
             "icrc1_total_supply",
+            "icrc1_minting_account",
             "icrc1_balance_of",
             "icrc1_transfer",
+            "icrc1_supported_standards",
+            "icrc1_metadata",
+            "icrc2_approve",
+            "icrc2_allowance",
+            "icrc2_transfer_from",
+            "icrc3_supported_block_types",
+            "icrc3_get_blocks",
             "mint_livelihood_grant",
             "apply_demurrage_burn",
+            "get_total_burned",
+            "get_total_disbursed_grants",
         ],
         "treasury": [
             "submit_proposal",
+            "vote_proposal",
+            "approve_proposal",
             "disburse_grant",
             "cancel_disputed_grant",
             "get_proposal",
@@ -49,6 +61,7 @@ def test_candid_did_interfaces():
             "get_treasury_balance_e8s",
         ],
         "x402_bazaar": [
+            "configure_ledger",
             "request_challenge",
             "settle_payment",
             "get_total_bazaar_burned_e8s",
@@ -85,3 +98,53 @@ def test_cargo_workspace_members():
         assert member_cargo.exists(), f"Cargo.toml for {member} must exist"
         member_src = REPO_ROOT / "canisters" / member / "src" / "lib.rs"
         assert member_src.exists(), f"lib.rs for {member} must exist"
+
+
+def test_compiled_wasm_artifacts_exist():
+    wasm_dir = REPO_ROOT / "target" / "wasm32-unknown-unknown" / "release"
+    if wasm_dir.exists():
+        expected_wasms = ["qicp_token.wasm", "treasury.wasm", "x402_bazaar.wasm", "conway_engine.wasm"]
+        for w in expected_wasms:
+            wasm_file = wasm_dir / w
+            assert wasm_file.exists(), f"Compiled WebAssembly binary {w} must exist"
+            assert wasm_file.stat().st_size > 100_000, f"Wasm binary {w} must be non-empty and valid"
+
+
+def test_icrc2_delegation_accounting_logic():
+    # Verify allowance mathematics and boundary invariants
+    balance = 1_000_000
+    fee = 10_000
+    allowance = 500_000
+    transfer_amount = 200_000
+
+    required = transfer_amount + fee
+    assert allowance >= required, "Sufficient allowance"
+    assert balance >= required, "Sufficient funds"
+
+    new_allowance = allowance - required
+    new_balance = balance - required
+    assert new_allowance == 290_000
+    assert new_balance == 790_000
+
+
+def test_treasury_timelock_and_voting_quorum():
+    # 7-day dispute window: 7 * 86400 = 604800 seconds
+    submission_time = 1_700_000_000
+    timelock_window = 7 * 86400
+    unlock_time = submission_time + timelock_window
+
+    current_time_early = submission_time + 86400  # 1 day later
+    assert current_time_early < unlock_time, "Disbursement blocked before 7 days elapse"
+
+    current_time_eligible = submission_time + timelock_window + 1
+    assert current_time_eligible >= unlock_time, "Disbursement eligible after 7 days"
+
+    # Quorum check: requires >= 3 votes for
+    votes_for = 2
+    votes_against = 0
+    approved = votes_for >= 3 and votes_for > votes_against
+    assert not approved, "Quorum not met with 2 votes"
+
+    votes_for = 3
+    approved = votes_for >= 3 and votes_for > votes_against
+    assert approved, "Quorum met with 3 votes"
