@@ -83,6 +83,10 @@ pub fn request_challenge(service_id: String, amount_e8s: u64) -> PaymentChalleng
 
 #[ic_cdk::update]
 pub fn settle_payment(receipt: PaymentReceipt) -> Result<SettlementAudit, String> {
+    // A caller-supplied receipt is not proof of an ICRC ledger transfer.
+    // Keep settlement disabled until a certified ledger-block verification path exists.
+    return Err("Settlement disabled: authenticated ICRC ledger receipt verification not implemented".to_string());
+    #[allow(unreachable_code)]
     let now = ic_cdk::api::time() / 1_000_000_000;
 
     BAZAAR_STATE.with(|b_ref| {
