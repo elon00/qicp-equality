@@ -2,6 +2,7 @@
 //! Full ICRC-1 compliant ledger canister with strategic elastic tokenomics.
 
 use candid::{CandidType, Deserialize, Nat, Principal};
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,6 +34,7 @@ pub struct StandardRecord {
     pub url: String,
 }
 
+#[derive(Clone, Debug)]
 pub struct TokenState {
     pub name: String,
     pub symbol: String,
@@ -61,46 +63,38 @@ impl Default for TokenState {
     }
 }
 
-// Global state simulation for local testing / canister runtime
-static mut STATE: Option<TokenState> = None;
-
-pub fn get_state() -> &'static mut TokenState {
-    unsafe {
-        if STATE.is_none() {
-            STATE = Some(TokenState::default());
-        }
-        STATE.as_mut().unwrap()
-    }
+thread_local! {
+    static STATE: RefCell<TokenState> = RefCell::new(TokenState::default());
 }
 
 #[ic_cdk::query]
 pub fn icrc1_name() -> String {
-    get_state().name.clone()
+    STATE.with(|s| s.borrow().name.clone())
 }
 
 #[ic_cdk::query]
 pub fn icrc1_symbol() -> String {
-    get_state().symbol.clone()
+    STATE.with(|s| s.borrow().symbol.clone())
 }
 
 #[ic_cdk::query]
 pub fn icrc1_decimals() -> u8 {
-    get_state().decimals
+    STATE.with(|s| s.borrow().decimals)
 }
 
 #[ic_cdk::query]
 pub fn icrc1_fee() -> Nat {
-    get_state().fee.clone()
+    STATE.with(|s| s.borrow().fee.clone())
 }
 
 #[ic_cdk::query]
 pub fn icrc1_total_supply() -> Nat {
-    get_state().total_supply.clone()
+    STATE.with(|s| s.borrow().total_supply.clone())
 }
 
 #[ic_cdk::query]
 pub fn icrc1_balance_of(account: Account) -> Nat {
-    get_state().balances.get(&account).cloned().unwrap_or_else(|| Nat::from(0u64))
+    STATE.with(|s| s.borrow().balances.get(&account).cloned().unwrap_or_else(|| Nat::from(0u64)))
 }
 
 #[ic_cdk::query]
@@ -124,40 +118,46 @@ pub fn icrc1_transfer(args: TransferArgs) -> Result<Nat, TransferError> {
         owner: caller,
         subaccount: args.from_subaccount,
     };
-    let state = get_state();
 
-    let balance = state.balances.get(&from).cloned().unwrap_or_else(|| Nat::from(0u64));
-    let required = &args.amount + &state.fee;
+    STATE.with(|s_ref| {
+        let mut state = s_ref.borrow_mut();
+        let balance = state.balances.get(&from).cloned().unwrap_or_else(|| Nat::from(0u64));
+        let fee = state.fee.clone();
+        let required = args.amount.clone() + fee;
 
-    if balance < required {
-        return Err(TransferError::InsufficientFunds { balance });
-    }
+        if balance < required {
+            return Err(TransferError::InsufficientFunds { balance });
+        }
 
-    *state.balances.entry(from).or_insert_with(|| Nat::from(0u64)) -= required;
-    *state.balances.entry(args.to).or_insert_with(|| Nat::from(0u64)) += args.amount;
+        *state.balances.entry(from).or_insert_with(|| Nat::from(0u64)) -= required;
+        *state.balances.entry(args.to).or_insert_with(|| Nat::from(0u64)) += args.amount;
 
-    // Transaction index
-    Ok(Nat::from(1u64))
+        Ok(Nat::from(1u64))
+    })
 }
 
 #[ic_cdk::update]
 pub fn mint_livelihood_grant(to: Account, amount: Nat, _memo: String) -> Result<Nat, TransferError> {
-    let state = get_state();
-    state.total_supply += &amount;
-    state.total_disbursed += &amount;
-    *state.balances.entry(to).or_insert_with(|| Nat::from(0u64)) += amount;
-    Ok(Nat::from(1u64))
+    STATE.with(|s_ref| {
+        let mut state = s_ref.borrow_mut();
+        state.total_supply += amount.clone();
+        state.total_disbursed += amount.clone();
+        *state.balances.entry(to).or_insert_with(|| Nat::from(0u64)) += amount;
+        Ok(Nat::from(1u64))
+    })
 }
 
 #[ic_cdk::update]
 pub fn apply_demurrage_burn(from: Account, burn_amount: Nat) -> Result<Nat, TransferError> {
-    let state = get_state();
-    let balance = state.balances.get(&from).cloned().unwrap_or_else(|| Nat::from(0u64));
-    if balance < burn_amount {
-        return Err(TransferError::InsufficientFunds { balance });
-    }
-    *state.balances.entry(from).or_insert_with(|| Nat::from(0u64)) -= &burn_amount;
-    state.total_supply -= &burn_amount;
-    state.total_burned += &burn_amount;
-    Ok(Nat::from(1u64))
+    STATE.with(|s_ref| {
+        let mut state = s_ref.borrow_mut();
+        let balance = state.balances.get(&from).cloned().unwrap_or_else(|| Nat::from(0u64));
+        if balance < burn_amount {
+            return Err(TransferError::InsufficientFunds { balance });
+        }
+        *state.balances.entry(from).or_insert_with(|| Nat::from(0u64)) -= burn_amount.clone();
+        state.total_supply -= burn_amount.clone();
+        state.total_burned += burn_amount;
+        Ok(Nat::from(1u64))
+    })
 }

@@ -135,11 +135,12 @@ dfx deploy --network ic --with-cycles 10000000000000
 
 ---
 
-## 📚 Technical Documentation Index
-
-- [**Academic Whitepaper**](docs/WHITEPAPER.md) — Comprehensive scientific, cryptographic, and economic whitepaper.
+- [**Academic Whitepaper**](docs/WHITEPAPER.md) (or [WHITEPAPER.md](WHITEPAPER.md)) — Comprehensive scientific, cryptographic, and economic whitepaper.
+- [**Workflow Design & Lifecycle Architecture**](docs/WORKFLOW_DESIGN.md) — CI/CD pipelines, canister upgrades, governance dispute timelocks, and emergency recovery runbooks.
+- [**About QICP Equality**](ABOUT.md) — Mission, target demographics (Moolnivasi, SC/ST/OBC/minorities), and independence disclosures.
 - [**Canister Architecture**](docs/ARCHITECTURE.md) — Multi-canister layout, state structures, and inter-canister calls.
 - [**Strategic Tokenomics**](docs/TOKENOMICS.md) — Elastic supply mathematics, quadratic formulas, and demurrage proofs.
 - [**x402 Protocol Specification**](docs/X402_PROTOCOL.md) — RFC 402 Pay-per-Inference technical specification.
 - [**Conway Automaton Specification**](docs/CONWAY_AUTOMATON.md) — Deterministic cellular governance mathematics.
 - [**Wiki Documentation**](wiki/Home.md) — Operations, mission, wallet integration, and disaster recovery runbooks.
+- [**Automated Security Audit**](scripts/audit_security.py) — Static code analysis, zero-mock PQC verification, and memory safety checks.

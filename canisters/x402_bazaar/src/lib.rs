@@ -2,6 +2,7 @@
 //! Implements HTTP 402 pay-per-inference challenges, settlement, and BME burns.
 
 use candid::{CandidType, Deserialize, Principal};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
@@ -33,6 +34,7 @@ pub struct SettlementAudit {
     pub settled_at: u64,
 }
 
+#[derive(Clone, Debug)]
 pub struct BazaarState {
     pub challenges: HashMap<String, PaymentChallenge>,
     pub consumed_receipts: HashSet<String>,
@@ -53,80 +55,78 @@ impl Default for BazaarState {
     }
 }
 
-static mut BAZAAR_STATE: Option<BazaarState> = None;
-
-pub fn get_bazaar() -> &'static mut BazaarState {
-    unsafe {
-        if BAZAAR_STATE.is_none() {
-            BAZAAR_STATE = Some(BazaarState::default());
-        }
-        BAZAAR_STATE.as_mut().unwrap()
-    }
+thread_local! {
+    static BAZAAR_STATE: RefCell<BazaarState> = RefCell::new(BazaarState::default());
 }
 
 #[ic_cdk::update]
 pub fn request_challenge(service_id: String, amount_e8s: u64) -> PaymentChallenge {
     let now = ic_cdk::api::time() / 1_000_000_000;
-    let b = get_bazaar();
-    b.challenge_counter += 1;
-    let nonce = format!("x402-nonce-{:08}-{:04}", now, b.challenge_counter);
 
-    let chal = PaymentChallenge {
-        nonce: nonce.clone(),
-        service_id,
-        amount_e8s,
-        pay_to: ic_cdk::id(),
-        expires_at: now + 300,
-    };
+    BAZAAR_STATE.with(|b_ref| {
+        let mut b = b_ref.borrow_mut();
+        b.challenge_counter += 1;
+        let nonce = format!("x402-nonce-{:08}-{:04}", now, b.challenge_counter);
 
-    b.challenges.insert(nonce, chal.clone());
-    chal
+        let chal = PaymentChallenge {
+            nonce: nonce.clone(),
+            service_id,
+            amount_e8s,
+            pay_to: ic_cdk::id(),
+            expires_at: now + 300,
+        };
+
+        b.challenges.insert(nonce, chal.clone());
+        chal
+    })
 }
 
 #[ic_cdk::update]
 pub fn settle_payment(receipt: PaymentReceipt) -> Result<SettlementAudit, String> {
     let now = ic_cdk::api::time() / 1_000_000_000;
-    let b = get_bazaar();
 
-    let replay_key = format!("{}:{}", receipt.block_index, receipt.nonce);
-    if b.consumed_receipts.contains(&replay_key) {
-        return Err("Replay attack detected: receipt already consumed".to_string());
-    }
+    BAZAAR_STATE.with(|b_ref| {
+        let mut b = b_ref.borrow_mut();
+        let replay_key = format!("{}:{}", receipt.block_index, receipt.nonce);
+        if b.consumed_receipts.contains(&replay_key) {
+            return Err("Replay attack detected: receipt already consumed".to_string());
+        }
 
-    let chal = b.challenges.get(&receipt.nonce).ok_or("Unknown challenge nonce")?;
-    if now > chal.expires_at {
-        return Err("Challenge has expired".to_string());
-    }
+        let chal = b.challenges.get(&receipt.nonce).ok_or("Unknown challenge nonce")?;
+        if now > chal.expires_at {
+            return Err("Challenge has expired".to_string());
+        }
 
-    if receipt.amount_e8s < chal.amount_e8s {
-        return Err("Underpaid receipt".to_string());
-    }
+        if receipt.amount_e8s < chal.amount_e8s {
+            return Err("Underpaid receipt".to_string());
+        }
 
-    b.consumed_receipts.insert(replay_key);
-    b.challenges.remove(&receipt.nonce);
+        b.consumed_receipts.insert(replay_key);
+        b.challenges.remove(&receipt.nonce);
 
-    let burned = receipt.amount_e8s / 2;
-    let treasury = receipt.amount_e8s - burned;
-    b.total_burned_e8s += burned;
-    b.total_treasury_e8s += treasury;
+        let burned = receipt.amount_e8s / 2;
+        let treasury = receipt.amount_e8s - burned;
+        b.total_burned_e8s += burned;
+        b.total_treasury_e8s += treasury;
 
-    Ok(SettlementAudit {
-        status: "SETTLED".to_string(),
-        service_id: receipt.service_id,
-        payer: receipt.payer,
-        block_index: receipt.block_index,
-        burned_e8s: burned,
-        treasury_e8s: treasury,
-        settled_at: now,
+        Ok(SettlementAudit {
+            status: "SETTLED".to_string(),
+            service_id: receipt.service_id,
+            payer: receipt.payer,
+            block_index: receipt.block_index,
+            burned_e8s: burned,
+            treasury_e8s: treasury,
+            settled_at: now,
+        })
     })
 }
 
 #[ic_cdk::query]
 pub fn get_total_bazaar_burned_e8s() -> u64 {
-    get_bazaar().total_burned_e8s
+    BAZAAR_STATE.with(|b_ref| b_ref.borrow().total_burned_e8s)
 }
 
 #[ic_cdk::query]
 pub fn get_total_bazaar_treasury_e8s() -> u64 {
-    get_bazaar().total_treasury_e8s
+    BAZAAR_STATE.with(|b_ref| b_ref.borrow().total_treasury_e8s)
 }
