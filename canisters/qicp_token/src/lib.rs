@@ -138,6 +138,9 @@ pub fn icrc1_transfer(args: TransferArgs) -> Result<Nat, TransferError> {
 
 #[ic_cdk::update]
 pub fn mint_livelihood_grant(to: Account, amount: Nat, _memo: String) -> Result<Nat, TransferError> {
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        return Err(TransferError::GenericError { error_code: Nat::from(403u64), message: "Only a canister controller may mint".to_string() });
+    }
     STATE.with(|s_ref| {
         let mut state = s_ref.borrow_mut();
         state.total_supply += amount.clone();
@@ -149,6 +152,9 @@ pub fn mint_livelihood_grant(to: Account, amount: Nat, _memo: String) -> Result<
 
 #[ic_cdk::update]
 pub fn apply_demurrage_burn(from: Account, burn_amount: Nat) -> Result<Nat, TransferError> {
+    if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        return Err(TransferError::GenericError { error_code: Nat::from(403u64), message: "Only a canister controller may burn third-party balances".to_string() });
+    }
     STATE.with(|s_ref| {
         let mut state = s_ref.borrow_mut();
         let balance = state.balances.get(&from).cloned().unwrap_or_else(|| Nat::from(0u64));
