@@ -1,0 +1,52 @@
+{
+  "project_name": "QICP Equality Protocol",
+  "ticker": "QICP",
+  "ecosystem": "Internet Computer (ICP)",
+  "version": "1.0.0",
+  "stage": "hardening-verified-mainnet-release-blocked",
+  "reality_gate": {
+    "zero_mock_enforced": true,
+    "pqc_standards": "NIST FIPS 204 (ML-DSA-65) & NIST FIPS 203 (ML-KEM-768)",
+    "conway_automaton": "Deterministic 32x32 Toroidal Cellular Engine",
+    "x402_bazaar": "RFC HTTP 402 Pay-per-Inference with 50% BME Burn",
+    "tokenomics": "Elastic Uncapped Supply with Quadratic Matching and Demurrage Decay",
+    "boundary_nodes_verified": [
+      "https://ic0.app",
+      "https://icp-api.io"
+    ]
+  },
+  "canisters": {
+    "qicp_token": {
+      "standard": "ICRC-1 / ICRC-2",
+      "candid": "canisters/qicp_token/qicp_token.did",
+      "status": "Verified Rust/Candid Interface"
+    },
+    "treasury": {
+      "purpose": "Community Livelihood Escrow & Dispute Timelocks",
+      "candid": "canisters/treasury/treasury.did",
+      "status": "Verified Rust/Candid Interface"
+    },
+    "x402_bazaar": {
+      "purpose": "Pay-per-Inference & Resource Bazaar",
+      "candid": "canisters/x402_bazaar/x402_bazaar.did",
+      "status": "Verified Rust/Candid Interface"
+    },
+    "conway_engine": {
+      "purpose": "Deterministic Neighborhood Consensus & Velocity",
+      "candid": "canisters/conway_engine/conway_engine.did",
+      "status": "Verified Rust/Candid Interface"
+    }
+  },
+  "mainnet_deployment": {
+    "status": "BLOCKED",
+    "dfx_identity": null,
+    "cycles_wallet_canister_id": null,
+    "third_party_audit_completed": false
+  },
+  "blockers": [
+    "Mainnet Production Canister Cycles Wallet is not configured on local host",
+    "Mainnet DFINITY production cryptographic identity (DFX_IDENTITY) is unconfigured",
+    "Independent third-party professional security audit of Rust/Candid canisters pending",
+    "Secondary DEX liquidity / ckBTC / ckETH trading pools pending mainnet canister deployment"
+  ]
+}

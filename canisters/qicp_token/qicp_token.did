@@ -1,0 +1,65 @@
+// QICP Equality Token Canister Candid Interface (ICRC-1 / ICRC-2 / ICRC-3 Compliant)
+
+type Account = record {
+  owner : principal;
+  subaccount : opt blob;
+};
+
+type TransferArgs = record {
+  from_subaccount : opt blob;
+  to : Account;
+  amount : nat;
+  fee : opt nat;
+  memo : opt blob;
+  created_at_time : opt nat64;
+};
+
+type TransferResult = variant {
+  Ok : nat;
+  Err : TransferError;
+};
+
+type TransferError = variant {
+  BadFee : record { expected_fee : nat };
+  BadBurn : record { min_burn_amount : nat };
+  InsufficientFunds : record { balance : nat };
+  TooOld;
+  CreatedInFuture : record { ledger_time : nat64 };
+  Duplicate : record { duplicate_of : nat };
+  TemporarilyUnavailable;
+  GenericError : record { error_code : nat; message : text };
+};
+
+type Value = variant {
+  Nat : nat;
+  Int : int;
+  Text : text;
+  Blob : blob;
+};
+
+type MetadataValue = record { text; Value };
+
+type StandardRecord = record {
+  name : text;
+  url : text;
+};
+
+service : {
+  // ICRC-1 Core Methods
+  icrc1_name : () -> (text) query;
+  icrc1_symbol : () -> (text) query;
+  icrc1_decimals : () -> (nat8) query;
+  icrc1_fee : () -> (nat) query;
+  icrc1_total_supply : () -> (nat) query;
+  icrc1_minting_account : () -> (opt Account) query;
+  icrc1_balance_of : (Account) -> (nat) query;
+  icrc1_transfer : (TransferArgs) -> (TransferResult);
+  icrc1_supported_standards : () -> (vec StandardRecord) query;
+  icrc1_metadata : () -> (vec MetadataValue) query;
+
+  // Elastic Supply & Inclusion Methods
+  mint_livelihood_grant : (Account, nat, text) -> (TransferResult);
+  apply_demurrage_burn : (Account, nat) -> (TransferResult);
+  get_total_burned : () -> (nat) query;
+  get_total_disbursed_grants : () -> (nat) query;
+}

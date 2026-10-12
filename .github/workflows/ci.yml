@@ -1,0 +1,47 @@
+name: CI & Technical Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Reality Gate Test Suite & Interface Conformance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Complete Reality Gate Verification Suite
+        run: |
+          python scripts/check.py --pqc --conway --tokenomics --x402 --api --canisters
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Node Dependencies
+        run: |
+          npm ci || npm install
+
+      - name: Verify Candid Interfaces
+        run: |
+          test -f dfx.json
+          test -f canisters/qicp_token/qicp_token.did
+          test -f canisters/treasury/treasury.did
+          test -f canisters/x402_bazaar/x402_bazaar.did
+          test -f canisters/conway_engine/conway_engine.did

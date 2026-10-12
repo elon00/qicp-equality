@@ -1,0 +1,42 @@
+// QICP Community Treasury & Escrow Canister Candid Interface
+
+type GrantStatus = variant {
+  Submitted;
+  UnderReview;
+  Approved;
+  Disbursed;
+  Cancelled;
+  Disputed;
+};
+
+type GrantProposal = record {
+  id : text;
+  title : text;
+  category : text;
+  beneficiary : principal;
+  amount_e8s : nat64;
+  proposer : principal;
+  unlock_timestamp : nat64;
+  status : GrantStatus;
+  conway_density : float32;
+  pqc_signature_hash : text;
+};
+
+type ProposalSubmission = record {
+  title : text;
+  category : text;
+  beneficiary : principal;
+  amount_e8s : nat64;
+  conway_density : float32;
+  pqc_signature_hash : text;
+};
+
+service : {
+  submit_proposal : (ProposalSubmission) -> (variant { Ok : text; Err : text });
+  vote_proposal : (text, bool) -> (variant { Ok : text; Err : text });
+  disburse_grant : (text) -> (variant { Ok : text; Err : text });
+  cancel_disputed_grant : (text, text) -> (variant { Ok : text; Err : text });
+  get_proposal : (text) -> (opt GrantProposal) query;
+  list_proposals : () -> (vec GrantProposal) query;
+  get_treasury_balance_e8s : () -> (nat64) query;
+}

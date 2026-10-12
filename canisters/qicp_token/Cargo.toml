@@ -1,0 +1,12 @@
+[package]
+name = "qicp_token"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+candid.workspace = true
+ic-cdk.workspace = true
+serde.workspace = true

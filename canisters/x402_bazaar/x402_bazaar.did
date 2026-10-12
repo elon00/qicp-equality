@@ -1,0 +1,34 @@
+// QICP x402 Resource Bazaar Canister Candid Interface
+
+type PaymentChallenge = record {
+  nonce : text;
+  service_id : text;
+  amount_e8s : nat64;
+  pay_to : principal;
+  expires_at : nat64;
+};
+
+type PaymentReceipt = record {
+  nonce : text;
+  block_index : nat64;
+  payer : principal;
+  service_id : text;
+  amount_e8s : nat64;
+};
+
+type SettlementAudit = record {
+  status : text;
+  service_id : text;
+  payer : principal;
+  block_index : nat64;
+  burned_e8s : nat64;
+  treasury_e8s : nat64;
+  settled_at : nat64;
+};
+
+service : {
+  request_challenge : (text, nat64) -> (PaymentChallenge);
+  settle_payment : (PaymentReceipt) -> (variant { Ok : SettlementAudit; Err : text });
+  get_total_bazaar_burned_e8s : () -> (nat64) query;
+  get_total_bazaar_treasury_e8s : () -> (nat64) query;
+}

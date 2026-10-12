@@ -1,0 +1,15 @@
+// QICP Conway Automaton Engine Canister Candid Interface
+
+type ConwayMetrics = record {
+  step : nat32;
+  active_nodes : nat32;
+  density : float32;
+  velocity_factor : float32;
+  state_hash : text;
+};
+
+service : {
+  init_automaton : (text) -> (ConwayMetrics);
+  step_automaton : (nat32) -> (ConwayMetrics);
+  get_current_metrics : () -> (ConwayMetrics) query;
+}

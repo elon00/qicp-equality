@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QICP Equality | Internet Computer Protocol (QEQ)</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo-badge">QICP</div>
+        <div>
+          <h1>QICP EQUALITY</h1>
+          <span class="tagline">Universal Economic Inclusion on the Internet Computer</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="network-badge">
+          <span class="dot live"></span> ICP Mainnet
+        </div>
+        <button id="connect-wallet-btn" class="btn btn-primary">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Mission Banner -->
+    <section class="mission-banner">
+      <div class="banner-content">
+        <h2>Economic Inclusion for Underserved Communities Worldwide</h2>
+        <p>
+          Dedicated to empowering Moolnivasi, SC, ST, OBC, minorities, and historically marginalized
+          populations through transparent livelihood grants, social enterprises, and public goods.
+          Powered by post-quantum cryptography (NIST ML-DSA-65), deterministic Conway automata,
+          and the RFC 402 Pay-per-Inference bazaar.
+        </p>
+      </div>
+    </section>
+
+    <!-- Top Grid: Tokenomics & Status -->
+    <section class="grid-stats">
+      <div class="stat-card">
+        <span class="stat-label">SUPPLY CEILING</span>
+        <span class="stat-value">Elastic / Uncapped</span>
+        <span class="stat-sub">Generational inclusion, anti-hoarding</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">GOVERNANCE ENGINE</span>
+        <span class="stat-value" id="stat-active-nodes">Active Cells</span>
+        <span class="stat-sub" id="stat-velocity">Conway Velocity: 1.0x</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">CRYPTOGRAPHIC POSTURE</span>
+        <span class="stat-value">NIST FIPS 204</span>
+        <span class="stat-sub">ML-DSA-65 Lattice Signatures</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">MICRO-PAYMENTS</span>
+        <span class="stat-value">x402 Bazaar</span>
+        <span class="stat-sub">50% Burn Equilibrium (BME)</span>
+      </div>
+    </section>
+
+    <!-- Interactive Workspace Tabs -->
+    <section class="workspace-tabs">
+      <button class="tab-btn active" data-tab="grants">Community Grants</button>
+      <button class="tab-btn" data-tab="conway">Conway Automaton</button>
+      <button class="tab-btn" data-tab="qr">Multi-Crypto QR</button>
+      <button class="tab-btn" data-tab="agent">AI Agent & Bazaar</button>
+      <button class="tab-btn" data-tab="tokenomics">Strategic Tokenomics</button>
+    </section>
+
+    <!-- Tab 1: Community Grants -->
+    <section id="tab-grants" class="tab-pane active">
+      <div class="two-col">
+        <div class="card">
+          <h3>Submit Community Inclusion Proposal</h3>
+          <p class="muted">Quadratic community matching cap automatically computed in real-time.</p>
+          <form id="proposal-form">
+            <div class="form-group">
+              <label>Proposal Title</label>
+              <input type="text" id="prop-title" required placeholder="e.g. Rural Women Livelihood Weaver Cooperative">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Category</label>
+                <select id="prop-category">
+                  <option value="Livelihood">Grassroots Livelihood</option>
+                  <option value="Public Goods">Public Goods / Solar Water</option>
+                  <option value="Micro-Enterprise">Social Micro-Enterprise</option>
+                  <option value="Education">Vocational Digital Literacy</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Target Community</label>
+                <input type="text" id="prop-community" required placeholder="e.g. Moolnivasi Artisan Union">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Beneficiary Count (N)</label>
+                <input type="number" id="prop-beneficiaries" value="50" min="1" required>
+              </div>
+              <div class="form-group">
+                <label>Requested QICP</label>
+                <input type="number" id="prop-amount" value="250000" min="1" required>
+              </div>
+            </div>
+            <div class="cap-indicator" id="cap-calc-display">
+              Calculating quadratic cap...
+            </div>
+            <div class="form-group">
+              <label>Proposer ICP Principal</label>
+              <input type="text" id="prop-principal" value="rdmx6-jaaaa-aaaaa-aaadq-cai" required>
+            </div>
+            <div class="form-group">
+              <label>Project Scope & Impact Plan</label>
+              <textarea id="prop-desc" rows="4" required placeholder="Detailed breakdown of livelihood goods, materials, and decentralized distribution plan..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary full-width">Submit Proposal to Treasury</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>Active Community Grant Proposals</h3>
+          <div id="proposals-list" class="proposals-container">
+            <div class="empty-state">Loading verified community proposals...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Conway Automaton Visualizer -->
+    <section id="tab-conway" class="tab-pane">
+      <div class="card">
+        <div class="card-header-flex">
+          <div>
+            <h3>Deterministic Conway Governance Automaton</h3>
+            <p class="muted">Toroidal 32x32 cellular lattice deriving mathematical consensus velocity factors from block hashes.</p>
+          </div>
+          <div class="conway-controls">
+            <button id="conway-step-btn" class="btn btn-secondary">Next Step</button>
+            <button id="conway-reseed-btn" class="btn btn-secondary">Re-Seed Grid</button>
+          </div>
+        </div>
+        <div class="conway-container">
+          <canvas id="conway-canvas" width="512" height="512"></canvas>
+          <div class="conway-metrics-panel">
+            <div class="metric-row">
+              <span>Current Generation:</span>
+              <strong id="conway-step-num">0</strong>
+            </div>
+            <div class="metric-row">
+              <span>Active Neighborhood Nodes:</span>
+              <strong id="conway-active-num">0</strong>
+            </div>
+            <div class="metric-row">
+              <span>Lattice Density:</span>
+              <strong id="conway-density-num">0.00%</strong>
+            </div>
+            <div class="metric-row">
+              <span>Algorithmic Velocity Factor:</span>
+              <strong id="conway-velocity-num">1.00x</strong>
+            </div>
+            <div class="metric-row">
+              <span>State Cryptographic Digest:</span>
+              <code id="conway-hash-num">computing...</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Multi-Crypto QR -->
+    <section id="tab-qr" class="tab-pane">
+      <div class="two-col">
+        <div class="card">
+          <h3>Dynamic Multi-Currency QR Terminal</h3>
+          <p class="muted">Instant decentralized QR generation for peer-to-peer grant disbursements and merchant checkout.</p>
+          <form id="qr-form">
+            <div class="form-group">
+              <label>Asset / Currency</label>
+              <select id="qr-currency">
+                <option value="QICP">QICP (Native ICRC-1)</option>
+                <option value="ICP">ICP (Internet Computer)</option>
+                <option value="CKBTC">ckBTC (Chain-Key Bitcoin)</option>
+                <option value="CKETH">ckETH (Chain-Key Ethereum)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Recipient Address / Principal</label>
+              <input type="text" id="qr-recipient" value="rdmx6-jaaaa-aaaaa-aaadq-cai" required>
+            </div>
+            <div class="form-group">
+              <label>Amount (Optional)</label>
+              <input type="number" id="qr-amount" value="50.0" step="any">
+            </div>
+            <div class="form-group">
+              <label>Memo / Reference</label>
+              <input type="text" id="qr-memo" value="grassroots-inclusion-grant">
+            </div>
+            <button type="submit" class="btn btn-primary full-width">Generate Payment QR</button>
+          </form>
+        </div>
+
+        <div class="card center-content">
+          <div id="qr-result-box" class="qr-display-box">
+            <img id="qr-image" src="" alt="Payment QR Code" style="display:none;">
+            <p id="qr-uri-text" class="qr-uri-code">Submit form to render QR</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: AI Agent & Bazaar -->
+    <section id="tab-agent" class="tab-pane">
+      <div class="card">
+        <div class="card-header-flex">
+          <div>
+            <h3>Multi-Model AI Inclusion Assistant & x402 Bazaar</h3>
+            <p class="muted">Verified decentralized policy auditing with NIST ML-DSA-65 cryptographic provenance.</p>
+          </div>
+          <div>
+            <select id="ai-model-select">
+              <option value="local:heuristic-inclusion-engine">Local Heuristic Inclusion Model</option>
+              <option value="icp:onchain:llama3-8b">ICP On-Chain LLaMA-3 Canister</option>
+              <option value="gateway:gemini-1.5-pro">Gemini 1.5 Pro Gateway</option>
+              <option value="gateway:claude-3-5-sonnet">Claude 3.5 Sonnet Gateway</option>
+            </select>
+          </div>
+        </div>
+        <div class="chat-container">
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-msg bot">
+              <div class="msg-header">QICP AI AGENT <span class="badge pqc">NIST ML-DSA-65</span></div>
+              <p>Welcome to the QICP Equality Protocol assistant. Ask questions regarding quadratic grant calculations, elastic tokenomics, post-quantum cryptography, or community inclusion eligibility.</p>
+            </div>
+          </div>
+          <form id="chat-form" class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Ask about grant allocations, demurrage rules, or tokenomics..." required>
+            <button type="submit" class="btn btn-primary">Send Query</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 5: Strategic Tokenomics -->
+    <section id="tab-tokenomics" class="tab-pane">
+      <div class="two-col">
+        <div class="card">
+          <h3>Demurrage & Anti-Hoarding Calculator</h3>
+          <p class="muted">Calculates algorithmic decay on speculative idle balances exceeding 1M QICP inactive for >90 days.</p>
+          <form id="demurrage-form">
+            <div class="form-group">
+              <label>Account Balance (QICP)</label>
+              <input type="number" id="dem-balance" value="2500000" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>Inactive Inactivity Duration (Days)</label>
+              <input type="number" id="dem-days" value="180" min="0" required>
+            </div>
+            <button type="submit" class="btn btn-secondary full-width">Compute Demurrage</button>
+          </form>
+          <div id="demurrage-results" class="results-box mt-3" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+          <h3>Burn-and-Mint Equilibrium (BME) Status</h3>
+          <p class="muted">Live macro-economic state balancing community livelihood minting against x402 bazaar burns.</p>
+          <div id="bme-dashboard" class="bme-grid">
+            <div class="metric-row"><span>Monthly Grant Minting:</span><strong>500,000 QICP</strong></div>
+            <div class="metric-row"><span>x402 Bazaar Burning:</span><strong>325,000 QICP</strong></div>
+            <div class="metric-row"><span>Demurrage Recycled:</span><strong>125,000 QICP</strong></div>
+            <div class="metric-row"><span>Macro Status:</span><span class="badge success">BALANCED EQUILIBRIUM</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>&copy; 2026 QICP Equality Protocol. Independent Open-Source Initiative on the Internet Computer.</p>
+      <div class="footer-links">
+        <a href="https://github.com/elon00/qicp-equality" target="_blank">GitHub Repository</a>
+        <a href="/docs/WHITEPAPER.md" target="_blank">Academic Whitepaper</a>
+        <a href="/docs/ARCHITECTURE.md" target="_blank">Canister Architecture</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Wallet Modal -->
+  <div id="wallet-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Select Internet Computer Wallet</h3>
+        <button id="close-modal-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="wallet-options">
+        <button class="wallet-option" onclick="handleWalletSelect('Internet Identity')">
+          <div class="wallet-name">Internet Identity (II)</div>
+          <span class="wallet-desc">Cryptographic WebAuthn / Passkeys</span>
+        </button>
+        <button class="wallet-option" onclick="handleWalletSelect('Plug Wallet')">
+          <div class="wallet-name">Plug Wallet</div>
+          <span class="wallet-desc">Browser Extension & Mobile dApp</span>
+        </button>
+        <button class="wallet-option" onclick="handleWalletSelect('NFID')">
+          <div class="wallet-name">NFID</div>
+          <span class="wallet-desc">Google / Email Sovereign Identity</span>
+        </button>
+        <button class="wallet-option" onclick="handleWalletSelect('Bitfinity Wallet')">
+          <div class="wallet-name">Bitfinity</div>
+          <span class="wallet-desc">EVM & ICP Multi-Chain Wallet</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

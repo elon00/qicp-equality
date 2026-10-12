@@ -1,0 +1,33 @@
+name: Production Release Readiness Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly verification audit
+
+jobs:
+  release-audit:
+    name: Audit Mainnet Prerequisites & Release Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Technical Suites
+        run: |
+          python scripts/check.py --pqc --conway --tokenomics --x402 --api --canisters --boundary
+
+      - name: Run Fail-Closed Production Release Gate
+        continue-on-error: true
+        run: |
+          python scripts/check.py --release
