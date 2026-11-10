@@ -27,6 +27,7 @@ type SettlementAudit = record {
 };
 
 service : {
+  configure_ledger : (principal) -> (variant { Ok : text; Err : text });
   request_challenge : (text, nat64) -> (PaymentChallenge);
   settle_payment : (PaymentReceipt) -> (variant { Ok : SettlementAudit; Err : text });
   get_total_bazaar_burned_e8s : () -> (nat64) query;

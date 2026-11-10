@@ -30,6 +30,71 @@ type TransferError = variant {
   GenericError : record { error_code : nat; message : text };
 };
 
+type ApproveArgs = record {
+  from_subaccount : opt blob;
+  spender : Account;
+  amount : nat;
+  expected_allowance : opt nat;
+  expires_at : opt nat64;
+  fee : opt nat;
+  memo : opt blob;
+  created_at_time : opt nat64;
+};
+
+type ApproveResult = variant {
+  Ok : nat;
+  Err : ApproveError;
+};
+
+type ApproveError = variant {
+  BadFee : record { expected_fee : nat };
+  InsufficientFunds : record { balance : nat };
+  AllowanceChanged : record { current_allowance : nat };
+  Expired : record { ledger_time : nat64 };
+  TooOld;
+  CreatedInFuture : record { ledger_time : nat64 };
+  Duplicate : record { duplicate_of : nat };
+  TemporarilyUnavailable;
+  GenericError : record { error_code : nat; message : text };
+};
+
+type AllowanceArgs = record {
+  account : Account;
+  spender : Account;
+};
+
+type Allowance = record {
+  allowance : nat;
+  expires_at : opt nat64;
+};
+
+type TransferFromArgs = record {
+  spender_subaccount : opt blob;
+  from : Account;
+  to : Account;
+  amount : nat;
+  fee : opt nat;
+  memo : opt blob;
+  created_at_time : opt nat64;
+};
+
+type TransferFromResult = variant {
+  Ok : nat;
+  Err : TransferFromError;
+};
+
+type TransferFromError = variant {
+  BadFee : record { expected_fee : nat };
+  BadBurn : record { min_burn_amount : nat };
+  InsufficientFunds : record { balance : nat };
+  InsufficientAllowance : record { allowance : nat };
+  TooOld;
+  CreatedInFuture : record { ledger_time : nat64 };
+  Duplicate : record { duplicate_of : nat };
+  TemporarilyUnavailable;
+  GenericError : record { error_code : nat; message : text };
+};
+
 type Value = variant {
   Nat : nat;
   Int : int;
@@ -44,6 +109,20 @@ type StandardRecord = record {
   url : text;
 };
 
+type BlockTypeRecord = record {
+  block_type : text;
+  url : text;
+};
+
+type Block = record {
+  id : nat;
+  tx_type : text;
+  from : opt Account;
+  to : opt Account;
+  amount : nat;
+  timestamp : nat64;
+};
+
 service : {
   // ICRC-1 Core Methods
   icrc1_name : () -> (text) query;
@@ -56,6 +135,15 @@ service : {
   icrc1_transfer : (TransferArgs) -> (TransferResult);
   icrc1_supported_standards : () -> (vec StandardRecord) query;
   icrc1_metadata : () -> (vec MetadataValue) query;
+
+  // ICRC-2 Delegation Methods
+  icrc2_approve : (ApproveArgs) -> (ApproveResult);
+  icrc2_allowance : (AllowanceArgs) -> (Allowance) query;
+  icrc2_transfer_from : (TransferFromArgs) -> (TransferFromResult);
+
+  // ICRC-3 Block Information
+  icrc3_supported_block_types : () -> (vec BlockTypeRecord) query;
+  icrc3_get_blocks : (nat, nat) -> (vec Block) query;
 
   // Elastic Supply & Inclusion Methods
   mint_livelihood_grant : (Account, nat, text) -> (TransferResult);

@@ -47,8 +47,9 @@ jobs:
           mkdir -p target/wasm-dist
           find target/wasm32-unknown-unknown/release -maxdepth 1 -name "*.wasm" -exec cp {} target/wasm-dist/ \;
           cd target/wasm-dist
-          sha256sum *.wasm > sha256_checksums.txt || true
-          cat sha256_checksums.txt || echo "No standalone wasm generated directly in this stage"
+          test -n "$(find . -maxdepth 1 -name '*.wasm' -print -quit)"
+          sha256sum ./*.wasm > sha256_checksums.txt
+          cat sha256_checksums.txt
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -66,30 +67,42 @@ jobs:
           python scripts/check.py
 
   canister-deploy-gate:
-    name: Canister Mainnet Deployment Gate
+    name: Read-only Mainnet Release Readiness Gate
     needs: validate-and-build
+    # Never run production readiness on push; mainnet deployment is out of scope.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.target_network == 'ic' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Evaluate Production Identity & Cycles Wallet Secrets
+      - name: Verify production prerequisites without disclosing secrets or deploying
         env:
-          IC_IDENTITY_PEM: ${{ secrets.IC_PRODUCTION_IDENTITY }}
-          IC_CYCLES_WALLET: ${{ secrets.IC_CYCLES_WALLET_ID }}
+          HAS_PRODUCTION_IDENTITY: ${{ secrets.IC_PRODUCTION_IDENTITY != '' }}
+          HAS_CYCLES_WALLET: ${{ secrets.IC_CYCLES_WALLET_ID != '' }}
+        shell: bash
         run: |
-          echo "=========================================================="
-          echo "QICP Equality Canister Release Gate Audit"
-          echo "=========================================================="
-          if [ -z "$IC_IDENTITY_PEM" ] || [ -z "$IC_CYCLES_WALLET" ]; then
-            echo "[FAIL-CLOSED GATE] Missing IC_PRODUCTION_IDENTITY or IC_CYCLES_WALLET_ID secrets."
-            echo "Production release deployment halted per zero-simulation policy."
-            echo "Canisters verified, built, and cryptographically sound."
-            echo "To perform live canister upgrades to the Internet Computer:"
-            echo "1. Configure GitHub repository secrets: IC_PRODUCTION_IDENTITY & IC_CYCLES_WALLET_ID"
-            echo "2. Authorize controller principal in canisters/dfx.json"
-            exit 2
-          else
-            echo "[RELEASE GATE CLEARED] Production credentials present."
-            echo "Initializing dfx CLI and performing live canister upgrade..."
-          fi
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          status = json.loads(Path("STATUS.json").read_text())
+          blockers = []
+          if os.environ.get("HAS_PRODUCTION_IDENTITY") != "true":
+              blockers.append("Production identity GitHub secret not configured")
+          if os.environ.get("HAS_CYCLES_WALLET") != "true":
+              blockers.append("Cycles wallet GitHub secret not configured")
+          if status.get("mainnet_deployment", {}).get("third_party_audit_completed") is not True:
+              blockers.append("Independent third-party audit evidence not recorded")
+          if blockers:
+              print("MAINNET RELEASE BLOCKED:")
+              for blocker in blockers:
+                  print(" -", blocker)
+              raise SystemExit(2)
+          print("Credential presence and recorded audit prerequisites confirmed.")
+          print("NO DEPLOYMENT EXECUTED. Independent verification and authorization still required.")
+          PY
