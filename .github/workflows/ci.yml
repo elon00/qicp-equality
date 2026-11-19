@@ -30,7 +30,7 @@ jobs:
           python scripts/check.py --pqc --conway --tokenomics --x402 --api --canisters
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
 
